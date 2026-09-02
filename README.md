@@ -10,7 +10,7 @@ It does not require a daemon, elevated privileges, network access, or an MCP ser
 
 ## Demo
 
-[![NPU Waveform in the Omarchy top bar during an active Intel NPU workload](https://github.com/user-attachments/assets/6323762e-0202-4f0f-b735-dbc78cd02d38)](https://github.com/user-attachments/assets/91047206-8a80-45ae-a695-25a2afc07550)
+![NPU Waveform in the Omarchy top bar during an active Intel NPU workload](https://github.com/user-attachments/assets/6323762e-0202-4f0f-b735-dbc78cd02d38)
 
 [Watch the waveform respond to several Voxtype OpenVINO workloads running on an Intel NPU.](https://github.com/user-attachments/assets/91047206-8a80-45ae-a695-25a2afc07550)
 
