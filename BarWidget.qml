@@ -20,8 +20,11 @@ BarWidget {
   property double memoryBytes: 0
   property string runtimeState: "unknown"
   property var samples: []
+  property var animationStartSamples: []
+  property real scrollProgress: 1
   property var scaleSamples: []
   property real rollingMaximum: 5
+  property real displayMaximum: 5
 
   readonly property int configuredSamples: Math.max(12, Math.min(24, Number(setting("sampleCount", 18))))
   readonly property int refreshIntervalMs: Math.max(1000, Number(setting("refreshIntervalMs", 1000)))
@@ -41,12 +44,28 @@ BarWidget {
     return Math.max(low, Math.min(high, value))
   }
 
+  function renderedSample(index) {
+    var target = index < samples.length ? Number(samples[index]) || 0 : 0
+    var start = index < animationStartSamples.length
+      ? Number(animationStartSamples[index]) || 0
+      : target
+    return start + (target - start) * scrollProgress
+  }
+
   function pushSample(value) {
     var rawValue = clamp(Number(value) || 0, 0, 100)
+    var rendered = []
+    for (var sampleIndex = 0; sampleIndex < configuredSamples; sampleIndex++) {
+      rendered.push(renderedSample(sampleIndex))
+    }
     var next = samples.slice(Math.max(0, samples.length - configuredSamples + 1))
     while (next.length < configuredSamples - 1) next.unshift(0)
     next.push(rawValue)
+
+    animationStartSamples = rendered
+    scrollProgress = 0
     samples = next
+    scrollAnimation.restart()
 
     var nextScale = scaleSamples.slice(Math.max(0, scaleSamples.length - scaleWindowSamples + 1))
     nextScale.push(rawValue)
@@ -95,7 +114,31 @@ BarWidget {
   onQuietColorChanged: graph.requestPaint()
   onLiveColorChanged: graph.requestPaint()
   onConfiguredSamplesChanged: pushSample(utilization)
-  onRollingMaximumChanged: graph.requestPaint()
+  onScrollProgressChanged: graph.requestPaint()
+  onDisplayMaximumChanged: graph.requestPaint()
+  onRollingMaximumChanged: {
+    scaleAnimation.from = displayMaximum
+    scaleAnimation.to = rollingMaximum
+    scaleAnimation.restart()
+  }
+
+  NumberAnimation {
+    id: scrollAnimation
+    target: root
+    property: "scrollProgress"
+    from: 0
+    to: 1
+    duration: Math.max(200, root.refreshIntervalMs - 80)
+    easing.type: Easing.Linear
+  }
+
+  NumberAnimation {
+    id: scaleAnimation
+    target: root
+    property: "displayMaximum"
+    duration: 350
+    easing.type: Easing.OutCubic
+  }
 
   Process {
     id: sampleProc
@@ -147,17 +190,16 @@ BarWidget {
       onPaint: {
         var ctx = getContext("2d")
         ctx.reset()
-        var values = root.samples
-        if (!values || values.length === 0) return
+        if (!root.samples || root.samples.length === 0) return
 
-        var count = values.length
+        var count = root.samples.length
         var breadth = root.vertical ? height : width
         var depth = root.vertical ? width : height
         var center = depth / 2
         var maxAmplitude = Math.max(1, center - 1)
 
         function utilizationAt(pixel) {
-          if (count <= 1 || breadth <= 1) return Number(values[0]) || 0
+          if (count <= 1 || breadth <= 1) return root.renderedSample(0)
           var position = pixel / (breadth - 1) * (count - 1)
           var left = Math.floor(position)
           var right = Math.min(count - 1, left + 1)
@@ -165,7 +207,7 @@ BarWidget {
           // Smooth interpolation gives the measured one-second samples an
           // audio-like envelope without inventing additional activity peaks.
           mix = mix * mix * (3 - 2 * mix)
-          return (Number(values[left]) || 0) * (1 - mix) + (Number(values[right]) || 0) * mix
+          return root.renderedSample(left) * (1 - mix) + root.renderedSample(right) * mix
         }
 
         function edgeTexture(pixel, amount) {
@@ -196,9 +238,9 @@ BarWidget {
         ctx.lineCap = "butt"
         ctx.strokeStyle = Qt.rgba(root.liveColor.r, root.liveColor.g, root.liveColor.b, 0.96)
         for (var pixel = 0; pixel < Math.ceil(breadth); pixel++) {
-          var amount = root.clamp(utilizationAt(pixel), 0, root.rollingMaximum)
+          var amount = root.clamp(utilizationAt(pixel), 0, root.displayMaximum)
           if (amount <= 0) continue
-          var scaled = maxAmplitude * amount / root.rollingMaximum
+          var scaled = maxAmplitude * amount / root.displayMaximum
           var magnitude = Math.max(0.55, scaled * edgeTexture(pixel, amount))
           ctx.beginPath()
           if (root.vertical) {
