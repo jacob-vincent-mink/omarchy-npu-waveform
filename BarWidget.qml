@@ -130,8 +130,8 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    fixedWidth: root.vertical ? root.barSize : Style.space(46)
-    fixedHeight: root.vertical ? Style.space(46) : root.barSize
+    fixedWidth: root.vertical ? root.barSize : Style.space(72)
+    fixedHeight: root.vertical ? Style.space(72) : root.barSize
     hasVisualContent: true
     labelVisible: false
     pressable: false
@@ -140,8 +140,8 @@ BarWidget {
     Canvas {
       id: graph
       anchors.centerIn: parent
-      width: root.vertical ? Style.space(13) : Style.space(34)
-      height: root.vertical ? Style.space(34) : Style.space(13)
+      width: root.vertical ? Style.space(13) : Style.space(60)
+      height: root.vertical ? Style.space(60) : Style.space(13)
       antialiasing: true
 
       onPaint: {
@@ -156,19 +156,24 @@ BarWidget {
         var center = depth / 2
         var maxAmplitude = Math.max(1, center - 1)
 
-        function along(index) {
-          return count <= 1 ? 0 : index * (breadth - 1) / (count - 1)
+        function utilizationAt(pixel) {
+          if (count <= 1 || breadth <= 1) return Number(values[0]) || 0
+          var position = pixel / (breadth - 1) * (count - 1)
+          var left = Math.floor(position)
+          var right = Math.min(count - 1, left + 1)
+          var mix = position - left
+          // Smooth interpolation gives the measured one-second samples an
+          // audio-like envelope without inventing additional activity peaks.
+          mix = mix * mix * (3 - 2 * mix)
+          return (Number(values[left]) || 0) * (1 - mix) + (Number(values[right]) || 0) * mix
         }
 
-        function amplitude(index) {
-          return maxAmplitude * root.clamp(Number(values[index]) || 0, 0, root.rollingMaximum)
-            / root.rollingMaximum
-        }
-
-        function point(index, side) {
-          var a = along(index)
-          var d = center + side * amplitude(index)
-          return root.vertical ? { x: d, y: a } : { x: a, y: d }
+        function edgeTexture(pixel, amount) {
+          // Deterministic high-frequency texture keeps the compact silhouette
+          // visually waveform-like while always staying inside its data envelope.
+          var seed = Math.sin((pixel + 1) * 12.9898 + amount * 78.233) * 43758.5453
+          var noise = seed - Math.floor(seed)
+          return 0.72 + noise * 0.28
         }
 
         // Draw a neutral idle centerline. Activity is overlaid using the live
@@ -185,37 +190,25 @@ BarWidget {
         ctx.strokeStyle = root.quietColor
         ctx.stroke()
 
-        // Fill the mirrored, adaptively scaled utilization envelope.
-        var p = point(0, -1)
-        ctx.beginPath()
-        ctx.moveTo(p.x, p.y)
-        for (var i = 1; i < count; i++) {
-          p = point(i, -1)
-          ctx.lineTo(p.x, p.y)
-        }
-        for (var j = count - 1; j >= 0; j--) {
-          p = point(j, 1)
-          ctx.lineTo(p.x, p.y)
-        }
-        ctx.closePath()
-        ctx.fillStyle = Qt.rgba(root.liveColor.r, root.liveColor.g, root.liveColor.b, 0.22)
-        ctx.fill()
-
-        // Trace only active segments. Idle portions retain the black baseline.
-        ctx.lineWidth = Math.max(1, Style.spaceReal(1))
-        ctx.lineJoin = "round"
-        ctx.lineCap = "round"
+        // Dense mirrored amplitude columns produce the audio-waveform shape.
+        // Their outer edge is scaled from real utilization and can never exceed it.
+        ctx.lineWidth = 1
+        ctx.lineCap = "butt"
         ctx.strokeStyle = Qt.rgba(root.liveColor.r, root.liveColor.g, root.liveColor.b, 0.96)
-        for (var side = -1; side <= 1; side += 2) {
-          for (var k = 1; k < count; k++) {
-            if ((Number(values[k - 1]) || 0) <= 0 && (Number(values[k]) || 0) <= 0) continue
-            var from = point(k - 1, side)
-            var to = point(k, side)
-            ctx.beginPath()
-            ctx.moveTo(from.x, from.y)
-            ctx.lineTo(to.x, to.y)
-            ctx.stroke()
+        for (var pixel = 0; pixel < Math.ceil(breadth); pixel++) {
+          var amount = root.clamp(utilizationAt(pixel), 0, root.rollingMaximum)
+          if (amount <= 0) continue
+          var scaled = maxAmplitude * amount / root.rollingMaximum
+          var magnitude = Math.max(0.55, scaled * edgeTexture(pixel, amount))
+          ctx.beginPath()
+          if (root.vertical) {
+            ctx.moveTo(center - magnitude, pixel + 0.5)
+            ctx.lineTo(center + magnitude, pixel + 0.5)
+          } else {
+            ctx.moveTo(pixel + 0.5, center - magnitude)
+            ctx.lineTo(pixel + 0.5, center + magnitude)
           }
+          ctx.stroke()
         }
       }
     }
