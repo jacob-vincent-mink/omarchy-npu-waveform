@@ -1,0 +1,65 @@
+{
+  "schemaVersion": 1,
+  "id": "jacob.npu",
+  "name": "NPU Waveform",
+  "version": "1.1.0",
+  "author": "Jacob Mink",
+  "license": "MIT",
+  "description": "A compact live Intel NPU utilization waveform for the Omarchy bar.",
+  "kinds": ["bar-widget"],
+  "activation": "on-demand",
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "NPU Waveform",
+    "description": "A btop-style waveform sampled from the Intel NPU kernel busy-time counter.",
+    "category": "System",
+    "aliases": ["npu", "intel-npu", "accelerator"],
+    "allowMultiple": false,
+    "defaults": {
+      "refreshIntervalMs": 1000,
+      "sampleCount": 18,
+      "scaleWindowSeconds": 60,
+      "scaleFloorPercent": 5
+    },
+    "schema": [
+      {
+        "key": "refreshIntervalMs",
+        "type": "integer",
+        "label": "Refresh interval (milliseconds)",
+        "min": 1000,
+        "max": 5000,
+        "step": 500,
+        "defaultValue": 1000
+      },
+      {
+        "key": "sampleCount",
+        "type": "integer",
+        "label": "Waveform samples",
+        "min": 12,
+        "max": 24,
+        "step": 1,
+        "defaultValue": 18
+      },
+      {
+        "key": "scaleWindowSeconds",
+        "type": "integer",
+        "label": "Adaptive scale window (seconds)",
+        "min": 15,
+        "max": 300,
+        "step": 15,
+        "defaultValue": 60
+      },
+      {
+        "key": "scaleFloorPercent",
+        "type": "integer",
+        "label": "Minimum scale ceiling (percent)",
+        "min": 1,
+        "max": 25,
+        "step": 1,
+        "defaultValue": 5
+      }
+    ]
+  }
+}
