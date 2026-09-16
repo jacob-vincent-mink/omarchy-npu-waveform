@@ -2,11 +2,13 @@
   "schemaVersion": 1,
   "id": "jacob.npu",
   "name": "NPU Waveform",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "author": "Jacob Mink",
   "license": "MIT",
-  "description": "A compact live Intel NPU utilization waveform for the Omarchy bar.",
-  "kinds": ["bar-widget"],
+  "description": "Intel NPU waveforms with native performance history and dedicated NPU power.",
+  "kinds": [
+    "bar-widget"
+  ],
   "activation": "on-demand",
   "entryPoints": {
     "barWidget": "BarWidget.qml"
@@ -15,13 +17,22 @@
     "displayName": "NPU Waveform",
     "description": "A btop-style waveform sampled from the Intel NPU kernel busy-time counter.",
     "category": "System",
-    "aliases": ["npu", "intel-npu", "accelerator"],
+    "aliases": [
+      "npu",
+      "intel-npu",
+      "accelerator"
+    ],
     "allowMultiple": false,
     "defaults": {
       "refreshIntervalMs": 1000,
       "sampleCount": 18,
       "scaleWindowSeconds": 60,
-      "scaleFloorPercent": 5
+      "scaleFloorPercent": 5,
+      "showUtilization": true,
+      "showFrequency": false,
+      "showMemory": false,
+      "showValues": false,
+      "showNpuPower": false
     },
     "schema": [
       {
@@ -59,6 +70,36 @@
         "max": 25,
         "step": 1,
         "defaultValue": 5
+      },
+      {
+        "key": "showUtilization",
+        "type": "boolean",
+        "label": "Show NPU activity in bar",
+        "defaultValue": true
+      },
+      {
+        "key": "showFrequency",
+        "type": "boolean",
+        "label": "Show NPU frequency in bar",
+        "defaultValue": false
+      },
+      {
+        "key": "showMemory",
+        "type": "boolean",
+        "label": "Show NPU memory in bar",
+        "defaultValue": false
+      },
+      {
+        "key": "showValues",
+        "type": "boolean",
+        "label": "Show numeric values beside bar waveforms",
+        "defaultValue": false
+      },
+      {
+        "key": "showNpuPower",
+        "type": "boolean",
+        "label": "Show NPU power in bar",
+        "defaultValue": false
       }
     ]
   }

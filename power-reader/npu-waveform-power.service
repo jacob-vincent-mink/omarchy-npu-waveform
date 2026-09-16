@@ -1,0 +1,34 @@
+[Unit]
+Description=Scoped NPU energy reader for NPU Waveform
+
+[Service]
+Type=simple
+User=root
+Group=@GROUP@
+ExecStart=/usr/bin/python3 -I /usr/local/libexec/npu-waveform-power-reader.py
+Restart=on-failure
+RestartSec=5
+RuntimeDirectory=npu-waveform
+RuntimeDirectoryMode=0750
+UMask=0027
+NoNewPrivileges=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+PrivateNetwork=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectKernelLogs=yes
+ProtectClock=yes
+RestrictSUIDSGID=yes
+RestrictRealtime=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_UNIX
+ReadWritePaths=/run/npu-waveform
+
+[Install]
+WantedBy=multi-user.target
